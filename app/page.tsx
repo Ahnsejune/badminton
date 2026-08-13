@@ -132,6 +132,12 @@ export default function Home() {
   }
   async function reset() { if (confirm("입력한 모든 경기 점수를 지울까요?")) { setScores({}); setDraftScores({}); localStorage.removeItem("shuttle-league-scores-v2"); try { await setDoc(doc(db,"leagues","main"),{teams,courtCount,shuffleSeed,scores:{},updatedAt:serverTimestamp()}); } catch { setSyncError("초기화 내용을 Firebase에 저장하지 못했습니다."); } } }
   async function shuffleSchedule() {
+    const shufflePassword = window.prompt("경기 섞기 관리자 비밀번호를 입력하세요.");
+    if (shufflePassword === null) return;
+    if (shufflePassword !== "1207") {
+      alert("비밀번호가 올바르지 않습니다.");
+      return;
+    }
     if (completed > 0 && !confirm("대진 순서가 변경됩니다. 저장된 경기 결과는 유지됩니다. 경기를 섞을까요?")) return;
     const nextSeed = Date.now(); setShuffleSeed(nextSeed); setActiveRound(1); localStorage.setItem("shuttle-league-shuffle-seed", String(nextSeed));
     try { await setDoc(doc(db,"leagues","main"),{teams,courtCount,shuffleSeed:nextSeed,scores,updatedAt:serverTimestamp()}); }
