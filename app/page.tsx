@@ -109,6 +109,12 @@ export default function Home() {
 
   useEffect(() => { if (activeRound > rounds.length) setActiveRound(Math.max(1, rounds.length)); }, [rounds.length, activeRound]);
 
+  useEffect(() => {
+    const closeDisplayOnBack = () => setDisplayMode(false);
+    window.addEventListener("popstate", closeDisplayOnBack);
+    return () => window.removeEventListener("popstate", closeDisplayOnBack);
+  }, []);
+
   const ranking = useMemo(() => {
     const stats = new Map(teams.map(t => [t.id, { ...t, played: 0, wins: 0, losses: 0, pf: 0, pa: 0, h2h: 0 } as Stat]));
     games.forEach(g => {
@@ -207,14 +213,22 @@ export default function Home() {
     const link = document.createElement("a"); link.download = `배드민턴-리그-기록-${new Date().toISOString().slice(0,10)}.png`; link.href = canvas.toDataURL("image/png"); link.click();
   }
   function deleteTeam(id: number) { if (confirm("이 팀을 삭제할까요? 기존 경기 점수는 초기화됩니다.")) void commitTeams(teams.filter(t => t.id !== id)); }
+  function openDisplayMode() {
+    window.history.pushState({ ...window.history.state, shuttleDisplay: true }, "");
+    setDisplayMode(true);
+  }
+  function closeDisplayMode() {
+    if (window.history.state?.shuttleDisplay) window.history.back();
+    else setDisplayMode(false);
+  }
 
   if (displayMode) return <main className="display-mode">
-    <div className="display-top"><div><span>SHUTTLE CLUB</span><h1>리그 전광판</h1></div><button onClick={()=>setDisplayMode(false)}>전광판 종료</button></div>
+    <div className="display-top"><div><span>SHUTTLE CLUB</span><h1>리그 전광판</h1></div><button onClick={closeDisplayMode}>전광판 종료</button></div>
     <section className="display-ranking"><div className="display-heading"><span>LIVE STANDINGS</span><h2>실시간 순위</h2></div><div className="display-rank-head"><span>순위</span><span>팀</span><span>승</span><span>패</span><span>득실차</span></div><div className="display-rank-list">{ranking.map((t,i)=><article key={t.id}><b>{i+1}</b><strong>{t.players}</strong><span>{t.wins}</span><span>{t.losses}</span><em>{t.pf-t.pa>0?"+":""}{t.pf-t.pa}</em></article>)}</div></section>
   </main>;
 
   return <main>
-    <header><div className="brand"><span className="mark">S</span><div><strong>SHUTTLE CLUB</strong><small>BADMINTON LEAGUE</small></div></div><div className="header-actions"><button className="display-btn" onClick={()=>setDisplayMode(true)}>전광판</button><button className="export-btn" onClick={exportLeagueImage}>기록 이미지</button><button className="admin-btn" onClick={() => setAdminOpen(true)}>팀 관리</button><button className="ghost" onClick={()=>requestProtectedAction("reset")}>초기화</button><button className="shuffle-btn" onClick={()=>requestProtectedAction("shuffle")}>↻ 경기 섞기</button></div></header>
+    <header><div className="brand"><span className="mark">S</span><div><strong>SHUTTLE CLUB</strong><small>BADMINTON LEAGUE</small></div></div><div className="header-actions"><button className="display-btn" onClick={openDisplayMode}>전광판</button><button className="export-btn" onClick={exportLeagueImage}>기록 이미지</button><button className="admin-btn" onClick={() => setAdminOpen(true)}>팀 관리</button><button className="ghost" onClick={()=>requestProtectedAction("reset")}>초기화</button><button className="shuffle-btn" onClick={()=>requestProtectedAction("shuffle")}>↻ 경기 섞기</button></div></header>
     <section id="schedule" className="section">{syncError&&<p className="sync-error">{syncError}</p>}<div className="section-title"><div><p>LEAGUE SCHEDULE</p><h2>리그 경기 일정</h2></div><div className="progress"><b>{completed}</b><span>/ {games.length}</span><small>경기 완료</small></div></div>
       {rounds.length ? <><div className="round-tabs">{rounds.map((_,i)=><button key={i} className={activeRound===i+1?"active":""} onClick={()=>setActiveRound(i+1)}>{i+1}R</button>)}</div>
       <div className="round-summary"><div><span>ROUND {activeRound}</span><h3>{activeRound}라운드</h3></div><p><b>{courtCount}개 코트</b> 운영 · {current?.games.length ?? 0}경기 동시 진행</p></div>
