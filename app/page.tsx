@@ -56,6 +56,9 @@ export default function Home() {
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState(false);
+  const [shuffleAuthOpen, setShuffleAuthOpen] = useState(false);
+  const [shufflePassword, setShufflePassword] = useState("");
+  const [shuffleAuthError, setShuffleAuthError] = useState(false);
   const [newTeam, setNewTeam] = useState("");
 
   useEffect(() => {
@@ -132,16 +135,16 @@ export default function Home() {
   }
   async function reset() { if (confirm("입력한 모든 경기 점수를 지울까요?")) { setScores({}); setDraftScores({}); localStorage.removeItem("shuttle-league-scores-v2"); try { await setDoc(doc(db,"leagues","main"),{teams,courtCount,shuffleSeed,scores:{},updatedAt:serverTimestamp()}); } catch { setSyncError("초기화 내용을 Firebase에 저장하지 못했습니다."); } } }
   async function shuffleSchedule() {
-    const shufflePassword = window.prompt("경기 섞기 관리자 비밀번호를 입력하세요.");
-    if (shufflePassword === null) return;
-    if (shufflePassword !== "1207") {
-      alert("비밀번호가 올바르지 않습니다.");
-      return;
-    }
     if (completed > 0 && !confirm("대진 순서가 변경됩니다. 저장된 경기 결과는 유지됩니다. 경기를 섞을까요?")) return;
     const nextSeed = Date.now(); setShuffleSeed(nextSeed); setActiveRound(1); localStorage.setItem("shuttle-league-shuffle-seed", String(nextSeed));
     try { await setDoc(doc(db,"leagues","main"),{teams,courtCount,shuffleSeed:nextSeed,scores,updatedAt:serverTimestamp()}); }
     catch { setSyncError("섞은 대진을 Firebase에 저장하지 못했습니다."); }
+  }
+  function authorizeShuffle(e: FormEvent) {
+    e.preventDefault();
+    if (shufflePassword !== "1207") { setShuffleAuthError(true); return; }
+    setShufflePassword(""); setShuffleAuthError(false); setShuffleAuthOpen(false);
+    void shuffleSchedule();
   }
   function login(e: FormEvent) { e.preventDefault(); if (password === "1207") { setAuthenticated(true); setPassword(""); setAuthError(false); } else setAuthError(true); }
   async function commitTeams(next: Team[]) {
@@ -167,7 +170,7 @@ export default function Home() {
   function deleteTeam(id: number) { if (confirm("이 팀을 삭제할까요? 기존 경기 점수는 초기화됩니다.")) void commitTeams(teams.filter(t => t.id !== id)); }
 
   return <main>
-    <header><div className="brand"><span className="mark">S</span><div><strong>SHUTTLE CLUB</strong><small>BADMINTON LEAGUE</small></div></div><div className="header-actions"><button className="admin-btn" onClick={() => setAdminOpen(true)}>팀 관리</button><button className="ghost" onClick={reset}>초기화</button><button className="shuffle-btn" onClick={shuffleSchedule}>↻ 경기 섞기</button></div></header>
+    <header><div className="brand"><span className="mark">S</span><div><strong>SHUTTLE CLUB</strong><small>BADMINTON LEAGUE</small></div></div><div className="header-actions"><button className="admin-btn" onClick={() => setAdminOpen(true)}>팀 관리</button><button className="ghost" onClick={reset}>초기화</button><button className="shuffle-btn" onClick={()=>setShuffleAuthOpen(true)}>↻ 경기 섞기</button></div></header>
     <section className="hero"><div><p className="eyebrow">{teams.length} TEAMS · ROUND ROBIN LEAGUE</p><h1>모두가 맞붙는,<br/><em>진짜 리그전</em>입니다.</h1><p className="intro">모든 팀이 서로 한 번씩 경기합니다. 동률일 때는 승자승을 먼저 적용해 순위를 계산합니다.</p></div>{ranking[0] && <div className="hero-stat"><span>현재 1위</span><strong>{ranking[0].players}</strong><small>{ranking[0].wins}승 {ranking[0].losses}패 · 득실차 {ranking[0].pf-ranking[0].pa>0?"+":""}{ranking[0].pf-ranking[0].pa}</small></div>}</section>
     <nav><a href="#schedule">경기 일정</a><a href="#ranking">실시간 순위</a>{syncError && <span className="sync-error">{syncError}</span>}</nav>
     <section id="schedule" className="section"><div className="section-title"><div><p>LEAGUE SCHEDULE</p><h2>리그 경기 일정</h2></div><div className="progress"><b>{completed}</b><span>/ {games.length}</span><small>경기 완료</small></div></div>
@@ -178,6 +181,7 @@ export default function Home() {
     <section id="ranking" className="section ranking-section"><div className="section-title"><div><p>LIVE STANDINGS</p><h2>실시간 리그 순위</h2></div><p className="rule">승·패 〉 승자승 〉 득실차 〉 득점 순</p></div><div className="table-wrap"><table><thead><tr><th>순위</th><th>팀</th><th>경기</th><th>승</th><th>패</th><th>승자승</th><th>득점</th><th>실점</th><th>득실차</th></tr></thead><tbody>{ranking.map((t,i)=><tr key={t.id} className={i===0?"leader":""}><td><b>{i+1}</b></td><td><span className="seed">{t.id}</span><strong>{t.players}</strong></td><td>{t.played}</td><td><b>{t.wins}</b></td><td>{t.losses}</td><td>{t.h2h}</td><td>{t.pf}</td><td>{t.pa}</td><td className={t.pf-t.pa>0?"plus":""}>{t.pf-t.pa>0?"+":""}{t.pf-t.pa}</td></tr>)}</tbody></table></div></section>
     <footer><strong>SHUTTLE CLUB</strong><span>좋은 경기, 멋진 승부를 응원합니다.</span></footer>
 
+    {shuffleAuthOpen&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget){setShuffleAuthOpen(false);setShufflePassword("");setShuffleAuthError(false)}}}><section className="modal" role="dialog" aria-modal="true" aria-label="경기 섞기 관리자 인증"><button className="modal-close" onClick={()=>{setShuffleAuthOpen(false);setShufflePassword("");setShuffleAuthError(false)}}>×</button><form className="login" onSubmit={authorizeShuffle}><span className="lock">●</span><p>ADMIN ACCESS</p><h2>경기 섞기</h2><label>비밀번호<input autoFocus type="password" value={shufflePassword} onChange={e=>{setShufflePassword(e.target.value);setShuffleAuthError(false)}} placeholder="비밀번호 입력"/></label>{shuffleAuthError&&<small>비밀번호가 올바르지 않습니다.</small>}<button className="primary" type="submit">확인 후 경기 섞기</button></form></section></div>}
     {adminOpen&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setAdminOpen(false)}}><section className="modal" role="dialog" aria-modal="true" aria-label="팀 관리자"><button className="modal-close" onClick={()=>setAdminOpen(false)}>×</button>{!authenticated?<form className="login" onSubmit={login}><span className="lock">●</span><p>ADMIN ACCESS</p><h2>관리자 로그인</h2><label>비밀번호<input autoFocus type="password" value={password} onChange={e=>{setPassword(e.target.value);setAuthError(false)}} placeholder="비밀번호 입력"/></label>{authError&&<small>비밀번호가 올바르지 않습니다.</small>}<button className="primary" type="submit">관리자 입장</button></form>:<div className="team-admin"><p>LEAGUE MANAGEMENT</p><h2>리그 운영 관리</h2><div className="court-setting"><div><strong>운영 코트 수</strong><small>라운드당 배치할 최대 경기 수</small></div><div className="court-stepper"><button onClick={()=>setCourtCount(c=>Math.max(1,c-1))}>−</button><input type="number" min="1" max="20" value={courtCount} onChange={e=>setCourtCount(Math.max(1,Math.min(20,Number(e.target.value)||1)))} aria-label="운영 코트 수"/><button onClick={()=>setCourtCount(c=>Math.min(20,c+1))}>+</button></div></div><div className="admin-note">코트 수에 맞춰 라운드별 경기를 자동 배치합니다. 팀을 변경하면 기존 경기 점수가 초기화됩니다.</div><div className="team-list">{teams.map((t,i)=><div className="team-edit" key={t.id}><span>{i+1}</span><input value={t.players} onChange={e=>editTeam(t.id,e.target.value)} aria-label={`${i+1}번 팀 이름`}/><button onClick={()=>deleteTeam(t.id)}>삭제</button></div>)}</div><form className="add-team" onSubmit={addTeam}><input value={newTeam} onChange={e=>setNewTeam(e.target.value)} placeholder="예: 민수 · 철수" aria-label="새 팀 이름"/><button type="submit">+ 팀 추가</button></form><button className="primary save-teams" onClick={persistEdits}>설정 저장 및 대진 편성</button></div>}</section></div>}
   </main>;
 }
