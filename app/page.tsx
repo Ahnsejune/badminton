@@ -210,11 +210,7 @@ export default function Home() {
 
   if (displayMode) return <main className="display-mode">
     <div className="display-top"><div><span>SHUTTLE CLUB</span><h1>리그 전광판</h1></div><button onClick={()=>setDisplayMode(false)}>전광판 종료</button></div>
-    <div className="display-grid">
-      <section className="display-current"><div className="display-heading"><span>NOW PLAYING</span><h2>{activeRound}라운드 · 현재 경기</h2></div><div className="display-games">{current?.games.map((g,i)=>{const s=scores[g.id];return <article key={g.id}><b>{i+1}번 코트</b><div><strong>{getTeam(g.a).players}</strong><em>{validScore(s)?s[0]:"-"}</em></div><span>VS</span><div><strong>{getTeam(g.b).players}</strong><em>{validScore(s)?s[1]:"-"}</em></div></article>})}</div></section>
-      <section className="display-next"><div className="display-heading"><span>UP NEXT</span><h2>다음 경기</h2></div>{rounds[activeRound]?.games.length?<div className="next-list">{rounds[activeRound].games.map((g,i)=><div key={g.id}><b>{i+1}번 코트</b><span>{getTeam(g.a).players}</span><em>VS</em><span>{getTeam(g.b).players}</span></div>)}</div>:<p className="display-empty">다음 경기가 없습니다.</p>}</section>
-    </div>
-    <section className="display-ranking"><div className="display-heading"><span>LIVE STANDINGS</span><h2>실시간 순위</h2></div><div>{ranking.map((t,i)=><article key={t.id}><b>{i+1}</b><strong>{t.players}</strong><span>{t.wins}승 {t.losses}패</span><em>{t.pf-t.pa>0?"+":""}{t.pf-t.pa}</em></article>)}</div></section>
+    <section className="display-ranking"><div className="display-heading"><span>LIVE STANDINGS</span><h2>실시간 순위</h2></div><div className="display-rank-head"><span>순위</span><span>팀</span><span>승</span><span>패</span><span>득실차</span></div><div className="display-rank-list">{ranking.map((t,i)=><article key={t.id}><b>{i+1}</b><strong>{t.players}</strong><span>{t.wins}</span><span>{t.losses}</span><em>{t.pf-t.pa>0?"+":""}{t.pf-t.pa}</em></article>)}</div></section>
   </main>;
 
   return <main>
